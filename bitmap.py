@@ -7,10 +7,10 @@ pygame.init()
 clock = pygame.time.Clock()
 size = width, height = 500, 500
 screen = pygame.display.set_mode(size)
-screen_offset = Vector2(20, 15)
+screen_offset = Vector2(2, -10)
 display_surface = pygame.display.set_mode(size)
 
-cell_size = 30
+cell_size = 10
 bitmap = [[]]
 bit_dims = bit_width, bit_height = int(width/cell_size), int(height/cell_size)
 
@@ -36,10 +36,10 @@ class Obj:
 
   def update(self):
     print(self.pos)
-    if self.rgdbdy and self.pos.y < 15:
+    if self.rgdbdy and self.pos.y < bit_height-1:
       self.physics()
 
-def initialize_np_bitmap(rows, columns):
+def refresh_bitmap(rows, columns):
   btmp = []
   for y in range(rows):
     bits = []
@@ -69,14 +69,21 @@ def initialize_np_bitmap(rows, columns):
 
 objs_in_scene = []
 
-test_obj = Obj(Vector2(5, 1), 'O', True)
-objs_in_scene.append(test_obj)
+test_obj1 = Obj(Vector2(2, 1), 1, True)
+objs_in_scene.append(test_obj1)
+test_obj2 = Obj(Vector2(5, 1), 2, True)
+objs_in_scene.append(test_obj2)
+
 def update_bitmap():
-  bitmap = initialize_np_bitmap(bit_width, bit_height)
+  bitmap = refresh_bitmap(bit_width, bit_height)
   for obj in objs_in_scene:
     obj.update()
-    bitmap[int(obj.pos.y), int(obj.pos.x)] = 1
+    bitmap[int(obj.pos.y), int(obj.pos.x)] = obj.character
   return bitmap
+
+def read_bitval(bitval):
+  bit_index = ' .oO0@*'
+  return bit_index[bitval]
 
 def render():
   mouse_pos = pygame.mouse.get_pos()
@@ -84,7 +91,7 @@ def render():
   bitmap = update_bitmap()
   for y, row in enumerate(bitmap):
     for x, entry in enumerate(row):
-      text = font.render(str(entry), True, white)
+      text = font.render(str(read_bitval(entry)), True, white)
       display_surface.blit(text, (Vector2(x * cell_size + screen_offset.x, y * cell_size + screen_offset.y)))
 
 while 1:
