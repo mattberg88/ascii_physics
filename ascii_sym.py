@@ -71,14 +71,14 @@ wall_l_obj = generate_wall(Vector2(10,100), Vector2(10, 400), cell_size, objs_in
 wall_r_obj = generate_wall(Vector2(width-20,100), Vector2(width-20, 400), cell_size, objs_in_scene, Obj)
 floor_obj = generate_floor(Vector2(0,400), Vector2(500, 400), cell_size, objs_in_scene, Obj)
 
-cursor_cube = Obj('o', Vector2(0,0), False, bounding_box=Vector2(10, 10), name='cursor')
+cursor_cube = Obj('(o_o)', Vector2(0,0), False, bounding_box=Vector2(20, 20), name='cursor')
 objs_in_scene.append(cursor_cube)
 
 particle_count = 100
 for i in range(particle_count):
   step_size = width/particle_count
   step = (random.random() * step_size)
-  char_obj = Obj('.', Vector2(i * step_size + 20, 200), True, Vector2((random.random()-0.5) * 10, 0))
+  char_obj = Obj('o', Vector2(i * step_size + 20, 200), True, Vector2((random.random()-0.5) * 10, 0))
   objs_in_scene.append(char_obj)
 
 def render():
