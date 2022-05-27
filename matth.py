@@ -13,19 +13,28 @@ def get_direction_vector(pos_a, pos_b):
 def add_vectors(vec_1, vec_2):
   return vec_1 + vec_2
 
-def bounds_distance_vector(obj, oth):
-  sbbx = obj.bounding_box.x
-  sbby = obj.bounding_box.y
-  srect_min_x = obj.pos.x - sbbx
-  srect_max_x = obj.pos.x + sbbx
-  srect_min_y = obj.pos.y - sbby
-  srect_max_y = obj.pos.y + sbby
-  obbx = oth.bounding_box.x
-  obby = oth.bounding_box.y
-  orect_min_x = oth.pos.x - obbx
-  orect_max_x = oth.pos.x + obbx
-  orect_min_y = oth.pos.y - obby
-  orect_max_y = oth.pos.y + obby
-  dx = max(srect_min_x - orect_min_x, 0, orect_max_x - srect_max_x)
-  dy = max(srect_min_y - orect_min_y, 0, orect_max_y - srect_max_y)
-  return Vector2(dx, dy)
+def generate_bounds_rect(obj):
+  bbx = obj.bounding_box.x
+  bby = obj.bounding_box.y
+  rect_min_x = obj.pos.x - bbx
+  rect_min_y = obj.pos.y - bby
+  return pygame.Rect((rect_min_x, rect_min_y), (bbx * 2, bby * 2))
+
+def bounds_collided(obj, oth):
+  rect1 = generate_bounds_rect(obj)
+  rect2 = generate_bounds_rect(oth)
+  return rect1.colliderect(rect2)
+
+def get_collision_rect(obj, oth):
+  r1 = generate_bounds_rect(obj)
+  r2 = generate_bounds_rect(oth)
+  leftX = max(r1.left, r2.left)
+  rightX = min(r1.right + obj.bounding_box.x, r2.right + oth.bounding_box.x)
+  topY = max(r1.top, r2.top)
+  bottomY = min(r1.bottom + obj.bounding_box.y, r2.bottom + oth.bounding_box.y)
+  if leftX < rightX and topY < bottomY:
+    width = rightX-leftX
+    height = bottomY-topY
+    return pygame.Rect(leftX, topY, width, height)
+  else:
+    return None

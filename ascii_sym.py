@@ -9,12 +9,12 @@ size = width, height = 500, 500
 screen = pygame.display.set_mode(size)
 display_surface = pygame.display.set_mode(size)
 
-gravity = Vector2(0, 5)
+gravity = Vector2(0, 1)
 objs_in_scene = []
 font = pygame.font.SysFont('Arial', 18, bold=True)
 
 class Obj:
-  def __init__(self, character, pos, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=2, bounding_box=Vector2(5, 5)):
+  def __init__(self, character, pos, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(5, 5)):
     self.character = character
     self.pos = pos
     self.rgdbdy = rgdbdy
@@ -23,12 +23,14 @@ class Obj:
     self.collided = False
     self.bounce_factor = bounce_factor
     self.bounding_box = bounding_box
+    self.name = character[0]
     self.lerp = 0
 
   def physics(self):
+    # step inertia towards homeostasis
     stasis_step = Vector2(self.inertia.x * (1 - self.lerp), self.inertia.y * (1 - self.lerp))
     if self.lerp < 1:
-      self.lerp = self.lerp + 0.01
+      self.lerp = self.lerp + 0.005
       self.inertia = stasis_step
     if not self.collided:
       self.inertia = self.inertia + gravity
@@ -60,11 +62,15 @@ class Obj:
   def detect_collision(self):
     for o in objs_in_scene:
       if o != self and o.collisions:
-        bv = bounds_distance_vector(self, o)
-        dt = math.sqrt(bv.x**2 + bv.y**2)
-        if dt < 10:
+        if bounds_collided(o, self):
           self.collided = True
-          self.inertia = self.inertia.reflect(bv * self.bounce_factor)
+          collision_rect = get_collision_rect(self, o)
+          pygame.draw.rect(screen, green, collision_rect)
+          cp = collision_rect.center
+          rebound_dtv = get_direction_vector(Vector2(cp[0], cp[1]), self.pos)
+          print('{} and {} dir: {}'.format(self.name, o.name, rebound_dtv))
+          rebound_vector = rebound_dtv.normalize()
+          self.inertia = self.inertia.reflect(rebound_vector)
           self.lerp = 0
         else:
           self.collided = False
@@ -75,13 +81,15 @@ class Obj:
       self.detect_collision()
     self.prevent_fall()
 
-for i in range(100):
-  floor_obj = Obj('_', Vector2(i * 5, 400), False, bounding_box=Vector2(10, 5))
-  objs_in_scene.append(floor_obj)
+floor_obj = Obj('_'*100, Vector2(0, 400), False, bounding_box=Vector2(500, 5))
 
-chars = 'oO0QD@'
+# for i in range(100):
+#   floor_obj = Obj('_', Vector2(i * 5, 400), False, bounding_box=Vector2(10, 5))
+objs_in_scene.append(floor_obj)
+
+chars = 'oO0QD@#$%*'
 for i, a in enumerate(chars):
-  char_obj = Obj(a, Vector2(i * 50, i * 50), True, Vector2((i - 5) * 10, 0))
+  char_obj = Obj(a, Vector2(i * 50, i * 50), True, Vector2((i - 5), 0))
   objs_in_scene.append(char_obj)
 
 
@@ -97,4 +105,4 @@ while 1:
     screen.fill(black)
     render()
     pygame.display.update()
-    clock.tick(30)
+    clock.tick(60)
