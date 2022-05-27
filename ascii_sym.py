@@ -1,6 +1,7 @@
 from matth import *
 from colors import *
-import sys, pygame, math
+import random
+import sys, pygame
 from pygame.math import Vector2
 pygame.init()
 clock = pygame.time.Clock()
@@ -10,11 +11,13 @@ screen = pygame.display.set_mode(size)
 display_surface = pygame.display.set_mode(size)
 
 gravity = Vector2(0, 1)
+#collision box size per unit
+char_size = 5
 objs_in_scene = []
 font = pygame.font.SysFont('Arial', 18, bold=True)
 
 class Obj:
-  def __init__(self, character, pos, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(5, 5)):
+  def __init__(self, character, pos, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(char_size, char_size)):
     self.character = character
     self.pos = pos
     self.rgdbdy = rgdbdy
@@ -36,41 +39,19 @@ class Obj:
       self.inertia = self.inertia + gravity
       self.pos = self.pos + self.inertia
 
-  def prevent_fall(self):
-    wall_r = width - 20
-    wall_l = 20
-    floor = height - 50
-    if self.pos.y >= floor:
-      self.collided = True
-      self.pos = Vector2(self.pos.x, floor)
-      self.inertia = self.inertia.reflect(Vector2(0, -1))
-    else:
-      self.collided = False
-    if self.pos.x > wall_r:
-      self.collided = True
-      self.pos = Vector2(wall_r, self.pos.y)
-      self.inertia = self.inertia.reflect(Vector2(-1, 0))
-    else:
-      self.collided = False
-    if self.pos.x < wall_l:
-      self.collided = True
-      self.pos = Vector2(wall_l, self.pos.y)
-      self.inertia = self.inertia.reflect(Vector2(1, 0))
-    else:
-      self.collided = False
-
-  def detect_collision(self):
+  def detect_collisions(self):
     for o in objs_in_scene:
       if o != self and o.collisions:
         if bounds_collided(o, self):
           self.collided = True
           collision_rect = get_collision_rect(self, o)
-          pygame.draw.rect(screen, green, collision_rect)
-          cp = collision_rect.center
-          rebound_dtv = get_direction_vector(Vector2(cp[0], cp[1]), self.pos)
-          print('{} and {} dir: {}'.format(self.name, o.name, rebound_dtv))
-          rebound_vector = rebound_dtv.normalize()
-          self.inertia = self.inertia.reflect(rebound_vector)
+          # pygame.draw.rect(screen, green, collision_rect)
+          collision_point = Vector2(collision_rect.center[0], collision_rect.center[1])
+          rebound_dv = get_direction_vector(collision_point, self.pos)
+          rebound_vector = rebound_dv.normalize()
+          print('{} and {} rebound_dv: {} rebound_vector: {}'.format(self.name, o.name, rebound_dv, rebound_vector))
+          self.pos = self.pos + rebound_dv
+          self.inertia = Vector2(self.inertia.x * round(rebound_vector.x), self.inertia.y * round(rebound_vector.y))
           self.lerp = 0
         else:
           self.collided = False
@@ -78,20 +59,26 @@ class Obj:
   def update(self):
     if self.rgdbdy:
       self.physics()
-      self.detect_collision()
-    self.prevent_fall()
+      self.detect_collisions()
 
-floor_obj = Obj('_'*100, Vector2(0, 400), False, bounding_box=Vector2(500, 5))
+# def generate_wall(top_pos, bottom_pos):
+#   wall_height = (top_pos.y - bottom_pos.y)/char_size
+#   return Obj('|\n' * int(wall_height), top_pos, False, bounding_box=Vector2(char_size, char_size * wall_height))
 
-# for i in range(100):
-#   floor_obj = Obj('_', Vector2(i * 5, 400), False, bounding_box=Vector2(10, 5))
+def generate_floor(left_pos, right_pos):
+  floor_length = (right_pos.x - left_pos.x)/char_size
+  return Obj('_' * int(floor_length), left_pos, False, bounding_box=Vector2(char_size * floor_length, char_size))
+
+
+
+floor_obj = generate_floor(Vector2(0,400), Vector2(500, 400))
 objs_in_scene.append(floor_obj)
 
-chars = 'oO0QD@#$%*'
-for i, a in enumerate(chars):
-  char_obj = Obj(a, Vector2(i * 50, i * 50), True, Vector2((i - 5), 0))
+chars = 'oO0QD@#$%'
+for i, a in enumerate('oO0QD@#$%'):
+  step_size = width/len(chars)
+  char_obj = Obj(a, Vector2(i * step_size, 100), True, Vector2( random.randint( -5, 5), 0))
   objs_in_scene.append(char_obj)
-
 
 def render():
   for object in objs_in_scene:

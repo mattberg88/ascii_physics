@@ -8,7 +8,7 @@ def get_distance_vector(pos_a, pos_b):
   return Vector2(abs(pos_b.x-pos_a.x), abs(pos_b.y-pos_a.y))
 
 def get_direction_vector(pos_a, pos_b):
-  return Vector2(pos_b.x - pos_a.x, pos_b.y - pos_a.y)
+  return Vector2(pos_b.x - pos_a.x + 1, pos_b.y - pos_a.y + 1)
 
 def add_vectors(vec_1, vec_2):
   return vec_1 + vec_2
