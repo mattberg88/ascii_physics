@@ -1,42 +1,49 @@
 from matth import *
 from colors import *
+from generators import *
 import random
 import sys, pygame
 from pygame.math import Vector2
 pygame.init()
 clock = pygame.time.Clock()
-seconds=(pygame.time.get_ticks())/1000
 size = width, height = 500, 500
 screen = pygame.display.set_mode(size)
 display_surface = pygame.display.set_mode(size)
 
-gravity = Vector2(0, 1)
-#collision box size per unit
-char_size = 5
+# CONFIGS:
+gravity = Vector2(0, 0.5)
+decay_rate = 0.002
+cell_size = 5
+frame_rate = 24
+
+
 objs_in_scene = []
 font = pygame.font.SysFont('Arial', 18, bold=True)
 
 class Obj:
-  def __init__(self, character, pos, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(char_size, char_size)):
+  def __init__(self, character, pos, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(cell_size, cell_size), draw_bb=False, name=''):
     self.character = character
     self.pos = pos
     self.rgdbdy = rgdbdy
     self.inertia = inertia
     self.collisions = collisions
-    self.collided = False
     self.bounce_factor = bounce_factor
     self.bounding_box = bounding_box
-    self.name = character[0]
-    self.lerp = 0
+    self.collided = False
+    self.draw_bb = draw_bb
+    self.name = name
+    self.step = 0
 
   def physics(self):
     # step inertia towards homeostasis
-    stasis_step = Vector2(self.inertia.x * (1 - self.lerp), self.inertia.y * (1 - self.lerp))
-    if self.lerp < 1:
-      self.lerp = self.lerp + 0.005
+    stasis_step = Vector2(self.inertia.x * (1 - self.step), self.inertia.y * (1 - self.step))
+    if self.step < 1:
+      self.step = self.step + decay_rate
       self.inertia = stasis_step
+    # constant gravity
     if not self.collided:
       self.inertia = self.inertia + gravity
+      # apply inertia vector to pos
       self.pos = self.pos + self.inertia
 
   def detect_collisions(self):
@@ -47,40 +54,36 @@ class Obj:
           collision_rect = get_collision_rect(self, o)
           # pygame.draw.rect(screen, green, collision_rect)
           collision_point = Vector2(collision_rect.center[0], collision_rect.center[1])
-          rebound_dv = get_direction_vector(collision_point, self.pos)
-          rebound_vector = rebound_dv.normalize()
-          print('{} and {} rebound_dv: {} rebound_vector: {}'.format(self.name, o.name, rebound_dv, rebound_vector))
-          self.pos = self.pos + rebound_dv
-          self.inertia = Vector2(self.inertia.x * round(rebound_vector.x), self.inertia.y * round(rebound_vector.y))
-          self.lerp = 0
+          rebound_vector = get_direction_vector(collision_point, self.pos).normalize()
+          self.pos = self.pos + rebound_vector
+          self.inertia = Vector2(self.inertia.x * rebound_vector.x * self.bounce_factor, self.inertia.y * rebound_vector.y * self.bounce_factor)
+          self.step = 0
         else:
           self.collided = False
+
 
   def update(self):
     if self.rgdbdy:
       self.physics()
       self.detect_collisions()
 
-# def generate_wall(top_pos, bottom_pos):
-#   wall_height = (top_pos.y - bottom_pos.y)/char_size
-#   return Obj('|\n' * int(wall_height), top_pos, False, bounding_box=Vector2(char_size, char_size * wall_height))
+wall_l_obj = generate_wall(Vector2(10,100), Vector2(10, 400), cell_size, objs_in_scene, Obj)
+wall_r_obj = generate_wall(Vector2(width-20,100), Vector2(width-20, 400), cell_size, objs_in_scene, Obj)
+floor_obj = generate_floor(Vector2(0,400), Vector2(500, 400), cell_size, objs_in_scene, Obj)
 
-def generate_floor(left_pos, right_pos):
-  floor_length = (right_pos.x - left_pos.x)/char_size
-  return Obj('_' * int(floor_length), left_pos, False, bounding_box=Vector2(char_size * floor_length, char_size))
+cursor_cube = Obj('o', Vector2(0,0), False, bounding_box=Vector2(10, 10), name='cursor')
+objs_in_scene.append(cursor_cube)
 
-
-
-floor_obj = generate_floor(Vector2(0,400), Vector2(500, 400))
-objs_in_scene.append(floor_obj)
-
-chars = 'oO0QD@#$%'
-for i, a in enumerate('oO0QD@#$%'):
-  step_size = width/len(chars)
-  char_obj = Obj(a, Vector2(i * step_size, 100), True, Vector2( random.randint( -5, 5), 0))
+particle_count = 100
+for i in range(particle_count):
+  step_size = width/particle_count
+  step = (random.random() * step_size)
+  char_obj = Obj('.', Vector2(i * step_size + 20, 200), True, Vector2((random.random()-0.5) * 10, 0))
   objs_in_scene.append(char_obj)
 
 def render():
+  mouse_pos = pygame.mouse.get_pos()
+  cursor_cube.pos = Vector2(mouse_pos[0] - 20, mouse_pos[1] - 10)
   for object in objs_in_scene:
     text = font.render(str(object.character), True, white)
     display_surface.blit(text, (object.pos))
@@ -92,4 +95,4 @@ while 1:
     screen.fill(black)
     render()
     pygame.display.update()
-    clock.tick(60)
+    clock.tick(frame_rate)
