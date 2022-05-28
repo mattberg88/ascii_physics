@@ -1,29 +1,35 @@
 from colors import *
+from matth import *
 import random
 import numpy as np
-import sys, pygame
+import sys, pygame, math
 from pygame.math import Vector2
 pygame.init()
+pygame.mouse.set_cursor((8,8),(0,0),(0,0,0,0,0,0,0,0),(0,0,0,0,0,0,0,0))
+# invisible mouse when in window
+
 clock = pygame.time.Clock()
 size = width, height = 500, 500
 screen = pygame.display.set_mode(size)
 screen_offset = Vector2(2, -10)
 display_surface = pygame.display.set_mode(size)
 
-cell_size = 10
+cell_size = 5
 bitmap = [[]]
 bit_dims = bit_width, bit_height = int(width/cell_size), int(height/cell_size)
 
-gravity = Vector2(0, 1)
-decay_rate = 0.002
-frame_rate = 24
+gravity = Vector2(0, 0.2)
+decay_rate = 0.007
+frame_rate = 30
 font = pygame.font.SysFont('Arial', 18, bold=True)
 
 class Obj:
-  def __init__(self, pos, character, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(cell_size, cell_size),  name=''):
+  def __init__(self, pos, character, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, bounding_box=Vector2(1, 1),  name=''):
     self.pos = pos
+    self.pos_pix = Vector2(pos.x * cell_size, pos.y * cell_size)
     self.character = character
     self.rgdbdy = rgdbdy
+    self.collided = False
     self.inertia = inertia
     self.collisions = collisions
     self.bounce_factor = bounce_factor
@@ -32,12 +38,42 @@ class Obj:
     self.step = 0
 
   def physics(self):
-    self.pos = self.pos + gravity
+    stasis_step = Vector2(self.inertia.x * (1 - self.step), self.inertia.y * (1 - self.step))
+    if self.step < 1:
+      self.step = self.step + decay_rate
+      self.inertia = stasis_step
+    # constant gravity
+    if not self.collided:
+      self.inertia = self.inertia + gravity
+    # apply inertia vector to pos
+      self.pos = self.pos + Vector2(self.inertia.x, self.inertia.y)
+
+  def detect_collisions(self):
+    for o in objs_in_scene:
+      if o != self and o.collisions:
+        if bounds_collided(self, o):
+          self.collided = True
+          dvect = get_direction_vector(self.pos_pix, o.pos_pix)
+          collision_point = Vector2(self.pos_pix.x + dvect.x, self.pos_pix.y + dvect.y)
+          rebound_vector = get_direction_vector(collision_point, self.pos_pix).normalize()
+          print('rebound vector: {}'.format(rebound_vector))
+          pygame.draw.circle(screen, green, collision_point, 3)
+          self.inertia = Vector2(self.inertia.x * rebound_vector.x * self.bounce_factor, self.inertia.y + rebound_vector.y * self.bounce_factor)
+          self.step = 0
+        else:
+          self.collided = False
 
   def update(self):
-    print(self.pos)
-    if self.rgdbdy and self.pos.y < bit_height-1:
+    if self.rgdbdy:
       self.physics()
+      self.detect_collisions()
+
+    if self.pos.y >= bit_height-1: self.pos.y = bit_height-1
+    if self.pos.y <= 1: self.pos.y = 1
+    if self.pos.x >= bit_width-1: self.pos.x = bit_width-1
+    if self.pos.x <= 1: self.pos.x = 1
+    self.pos_pix = Vector2(self.pos.x * cell_size, self.pos.y * cell_size)
+
 
 def refresh_bitmap(rows, columns):
   btmp = []
@@ -49,30 +85,22 @@ def refresh_bitmap(rows, columns):
     btmp.append(bits)
   return np.array(btmp)
 
-# CONFIGS:
-
-# wall_l_obj = generate_wall(Vector2(10,100), Vector2(10, 400), cell_size, objs_in_scene, Obj)
-# wall_r_obj = generate_wall(Vector2(width-20,100), Vector2(width-20, 400), cell_size, objs_in_scene, Obj)
-# floor_obj = generate_floor(Vector2(0,400), Vector2(500, 400), cell_size, objs_in_scene, Obj)
-
-# cursor_cube = Obj(100, 'O', Vector2(50, 50))
-# objs_in_scene.append(cursor_cube)
-# def update_bitmap():
-#   for ob in objs_in_scene:
-#     bitmap
-# particle_count = 300
-# for i in range(particle_count):
-#   step_size = width/particle_count
-#   step = (random.random() * step_size)
-#   char_obj = Obj('o', Vector2(i * step_size + 20, 200), True, Vector2((random.random()-0.5) * 10, 0))
-#   objs_in_scene.append(char_obj)
-
 objs_in_scene = []
 
-test_obj1 = Obj(Vector2(2, 1), 1, True)
-objs_in_scene.append(test_obj1)
-test_obj2 = Obj(Vector2(5, 1), 2, True)
+cursor_cube = Obj(Vector2(0,0), 2)
+objs_in_scene.append(cursor_cube)
+
+for i in range(50):
+  floor_obj = Obj(Vector2(i + bit_width/4, 80), 6, False, bounding_box=Vector2(1,1))
+  objs_in_scene.append(floor_obj)
+# for j in range(10):
+#   test_obj = Obj(Vector2(j * 2 + bit_width/3, 5), 2, True, Vector2(-1 + j/5,0), bounce_factor=1.1)
+#   objs_in_scene.append(test_obj)
+test_obj = Obj(Vector2(40, 5), 1, True)
+objs_in_scene.append(test_obj)
+test_obj2 = Obj(Vector2(60, 5), 1, True)
 objs_in_scene.append(test_obj2)
+
 
 def update_bitmap():
   bitmap = refresh_bitmap(bit_width, bit_height)
@@ -82,13 +110,14 @@ def update_bitmap():
   return bitmap
 
 def read_bitval(bitval):
-  bit_index = ' .oO0@*'
+  bit_index = ' oO0@*-.'
   return bit_index[bitval]
 
 def render():
   mouse_pos = pygame.mouse.get_pos()
-  # cursor_cube.pos = Vector2(mouse_pos[0] - 20, mouse_pos[1] - 10)
+  cursor_cube.pos = Vector2((mouse_pos[0] - 7)/cell_size, (mouse_pos[1] + 1)/cell_size)
   bitmap = update_bitmap()
+
   for y, row in enumerate(bitmap):
     for x, entry in enumerate(row):
       text = font.render(str(read_bitval(entry)), True, white)

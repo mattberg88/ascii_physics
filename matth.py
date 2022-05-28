@@ -7,13 +7,11 @@ def get_distance_vector(pos_a, pos_b):
   return Vector2(abs(pos_b.x-pos_a.x), abs(pos_b.y-pos_a.y))
 
 def get_direction_vector(pos_a, pos_b):
-  return Vector2(pos_b.x - pos_a.x + 2, pos_b.y - pos_a.y + 2)
+  return Vector2(pos_b.x - pos_a.x, pos_b.y - pos_a.y)
 
 def get_normal_direction(pos_a, pos_b):
-  return get_direction_vector(pos_a, pos_b).normalize()
-
-def add_vectors(vec_1, vec_2):
-  return vec_1 + vec_2
+  norm = get_direction_vector(pos_a, pos_b).normalize()
+  return Vector2((norm.x + 0.5) * 2, (norm.y + 0.5) * 2)
 
 def generate_bounds_rect(obj):
   bbx = obj.bounding_box.x
@@ -27,7 +25,7 @@ def bounds_collided(obj, oth):
   rect2 = generate_bounds_rect(oth)
   return rect1.colliderect(rect2)
 
-def get_collision_rect(obj, oth):
+def get_collision_rect(obj, oth, cell_size=1):
   rect1 = generate_bounds_rect(obj)
   rect2 = generate_bounds_rect(oth)
   leftX = max(rect1.left, rect2.left)
@@ -37,6 +35,6 @@ def get_collision_rect(obj, oth):
   if leftX < rightX and topY < bottomY:
     width = rightX-leftX
     height = bottomY-topY
-    return pygame.Rect(leftX, topY, width, height)
+    return pygame.Rect(leftX * cell_size, topY * cell_size, width * cell_size, height * cell_size)
   else:
     return None
