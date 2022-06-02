@@ -36,65 +36,84 @@ class Obj:
     self.bounce_factor = bounce_factor
     self.energy = 0
     self.collided = []
+    self.collision_matrix = np.array([[0,0,0], [0,0,0], [0,0,0]])
     self.last_pos = self.pos
     self.speed = Vector2(0,0)
     self.name = name
 
   def physics(self):
-    stasis_step = Vector2(self.inertia.x * self.energy, self.inertia.y * self.energy)
+
+    bounce = collision_to_vec(self.collision_matrix)
+    print(self.collision_matrix, bounce)
+
+    # if cm[1, 1] == 1:
+    #   self.pos += collision_to_move(cm)
+    # self.energy = mass * acceleration**2
+    stasis_step = Vector2((self.inertia.x * bounce.x) * self.energy, (self.inertia.y * bounce.y) * self.energy)
     if self.energy > 0:
       self.energy = self.energy - decay_rate
       self.inertia = stasis_step
-    self.inertia = self.inertia + gravity
-    self.pos = self.pos + self.inertia
-
+    if self.collision_matrix[2,1] == 0 and self.inertia.magnitude() < 1.5:
+      self.inertia = self.inertia + gravity
+    self.pos = int_vector(self.pos + self.inertia)
+    # self.pos = apply_border_threshold(bit_width, bit_height, border_width, self.pos)
 
   def detect_collisions(self):
     for o in objs_in_scene:
-      if o != self and o.collisions:
-        if self.pos.distance_to(o.pos) < 1 and o not in self.collided:
-          self.collided.append(o)
-          d = get_direction_vector(self.pos, o.pos)
-          d_norms = d.normalize()
-          if o.rgdbdy:
-            self.inertia = Vector2(((self.inertia.x * -d_norms.x) + o.inertia.x) * self.bounce_factor, ((self.inertia.y * -d_norms.y) + o.inertia)  * self.bounce_factor)
-            self.energy = 1
-          else:
-            # self.pos = self.pos - self.inertia
-            i = self.inertia - d
-            self.pos = self.pos - self.inertia
-            self.inertia = Vector2(i.x * self.bounce_factor, i.y * self.bounce_factor)
-            print('self: {} self pos: {} other pos: {} dr: {} inertia: {}'.format(self.character, self.pos, o.pos, -d_norms, self.inertia))
-        if self.pos.distance_to(o.pos) >= 1 and o in self.collided:
-          self.collided.remove(o)
+      if o != self and o.collisions and self.pos.distance_to(o.pos) <= 1 :
+        # pos_a = Vector2(math.floor(self.pos.x), math.floor(self.pos.y))
+        # pos_b = Vector2(round(o.pos.x), round(o.pos.y))
+        c_norm = Vector2(self.pos.x- o.pos.x, self.pos.y-o.pos.y)
+        for i, y in enumerate(self.collision_matrix):
+          for k, x in enumerate(y):
+            if -c_norm == Vector2(k-1, i-1):
+              self.energy = 1
+              self.collision_matrix[i, k] = 1
+            else:
+              self.collision_matrix[i, k] = 0
+
+
+          # self.collided.append(o)
+          # contact_vector = get_distance_vector(self.pos, o.pos)
+          # if contact_vector.length() == 0: return
+          # cv_norm = contact_vector.normalize()
+          # redirected_inertia = vector_mult(self.inertia, -cv_norm)
+          # bounce = Vector2(redirected_inertia.x * self.bounce_factor, redirected_inertia.y * self.bounce_factor)
+          # if self.name != 'cursor' :
+          #   self.pos = self.pos - cv_norm
+          # self.inertia = bounce + self.speed
+          # self.energy = mass * acceleration**2
+          # print('self: {} self pos: {} other pos: {} cv_norm: {} inertia: {}'.format(self.character, self.pos, o.pos, cv_norm, self.inertia))
+        # if self.pos.distance_to(o.pos) >= 1 and o in self.collided:
+        #   self.collided.remove(o)
 
 
   def calculate_speed(self):
     if self.last_pos != self.pos:
-      self.speed = get_direction_vector(self.pos, self.last_pos)
+      self.speed = get_distance_vector(self.pos, self.last_pos)
       self.last_pos = self.pos
 
   def update(self):
-    if self.rgdbdy or self.name == 'cursor':
+    if self.rgdbdy:
       self.calculate_speed()
-      self.physics()
       self.detect_collisions()
-      self.pos = apply_border_threshold(bit_width, bit_height, border_width, self.pos)
+      if self.name != 'cursor':
+        self.physics()
     self.last_pos = self.pos
 
 objs_in_scene = []
 
-cursor_obj = Obj(Vector2(0,0), 2, False, 'cursor')
+cursor_obj = Obj(Vector2(0,0), 2, 'cursor')
 objs_in_scene.append(cursor_obj)
 
 for i in range(bit_width - 1):
   floor_obj = Obj(Vector2(border_width/2 + i, bit_height - cell_size), 6, 'floor')
   objs_in_scene.append(floor_obj)
-# for j in range(20):
-#   for k in range(int(20)):
-#     test_obj = Obj(Vector2(bit_width/2 + j, border_width + k), 7, True)
+# for j in range(10):
+#   for k in range(int(10)):
+#     test_obj = Obj(Vector2(bit_width/2 + j, border_width + k), 1, 'test', True)
 #     objs_in_scene.append(test_obj)
-test_obj = Obj(Vector2(bit_width/2, border_width), 1, 'test', True)
+test_obj = Obj(Vector2(bit_width/2, border_width + cell_size), 1, 'test', True)
 objs_in_scene.append(test_obj)
 
 def render_bitmap(bitmap):
@@ -113,7 +132,7 @@ while 1:
   screen.fill(black)
   mouse_pos = pygame.mouse.get_pos()
   cursor_offset = bit_dict[cursor_obj.char_index]['offset']
-  cursor_obj.pos = Vector2((mouse_pos[0] + cursor_offset.x)/cell_size, (mouse_pos[1] + cursor_offset.y)/cell_size)
+  cursor_obj.pos = Vector2(int((mouse_pos[0] + cursor_offset.x)/cell_size), int((mouse_pos[1] + cursor_offset.y)/cell_size))
   bitmap = blank_bitmap(bit_width, bit_height)
   bitmap = update_bitmap(bitmap, 1, objs_in_scene)
   render_bitmap(bitmap)
