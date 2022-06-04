@@ -9,7 +9,7 @@ pygame.mouse.set_cursor((8,8),(0,0),(0,0,0,0,0,0,0,0),(0,0,0,0,0,0,0,0))
 # invisible mouse when in window
 
 clock = pygame.time.Clock()
-size = width, height = 500, 500
+size = width, height = 1000, 500
 screen = pygame.display.set_mode(size)
 screen_offset = Vector2(-5, -10)
 border_width = 5
@@ -25,10 +25,10 @@ for y in range(bit_height):
     bits.append(0)
   bit_array.append(bits)
 bitmap = np.array(bit_array)
-gravity = Vector2(0, 0.1)
+gravity = Vector2(0, 1)
 terminal_velocity = 3
-decay_rate = 0.1
-frame_rate = 24
+decay_rate = 0.2
+frame_rate = 60
 font = pygame.font.SysFont('Arial', 18, bold=True)
 
 def generate_scene(config):
@@ -57,7 +57,7 @@ def generate_scene(config):
   return scene
 
 class Obj:
-  def __init__(self, id, pos, char_index, name, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, mass=5):
+  def __init__(self, id, pos, char_index, name, rgdbdy=False, inertia=Vector2(0,0), collisions=True, bounce_factor=1, mass=10):
     self.id = id
     self.pos = pos
     self.real_pos = pos
@@ -69,7 +69,7 @@ class Obj:
     self.speed_vector = Vector2(0,0)
     self.collisions = collisions
     self.bounce_factor = bounce_factor
-    self.energy = 0
+    self.energy = 1
     self.last_pos = self.pos
     self.collided = []
     self.speed = 0
@@ -80,11 +80,13 @@ class Obj:
     cm = bitmap_to_cm(bitmap, self.pos)
     bounce = collision_to_vec(cm)
     self.energy = max(0, self.energy - decay_rate)
-    stasis_step = Vector2(bounce.x * self.energy, bounce.y * self.energy)
+    stasis_step = Vector2((self.inertia.x +  bounce.x) * self.energy, (self.inertia.y + bounce.y) * self.energy)
     if self.name != 'cursor':
+      self.inertia = limit_vector(round_vector(stasis_step), 2)
       if bitmap[int(self.pos.y + 1), int(self.pos.x)] == 0 and self.inertia.length() < terminal_velocity:
         self.inertia = self.inertia + gravity
-      self.inertia = limit_vector(round_vector(self.inertia + stasis_step), 1)
+        # print(self.speed)
+        self.energy = self.speed - decay_rate
       self.real_pos = self.real_pos + self.inertia
       self.real_pos = apply_border_threshold(bit_width, bit_height, border_width, self.real_pos)
     else:
@@ -95,11 +97,12 @@ class Obj:
     if map_pos_bit != self.id and map_pos_bit != 0:
       self.real_pos += collision_to_move(cm)
     self.pos = int_vector(self.real_pos)
-    # print('inertia: {}, stasis_step : {}, energy: {}, speed: {}'.format(self.inertia, stasis_step , self.energy, self.speed))
+    # if self.name != 'cursor':
+    #   print('inertia: {}, stasis_step : {}, energy: {}, speed: {}'.format(self.inertia, stasis_step , self.energy, self.speed))
 
   def detect_collisions(self):
     for o in objs_in_scene:
-      if o != self and o.collisions and o not in self.collided and self.pos.distance_to(o.pos) <= 1 :
+      if o != self and o.collisions and o not in self.collided and self.real_pos.distance_to(o.real_pos) < 1 :
         self.collided.append(o)
         self.inertia = self.inertia - o.speed_vector
         # self.energy = self.mass * self.speed**2
