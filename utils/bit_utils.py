@@ -2,16 +2,19 @@ import numpy as np
 import math
 from pygame.math import Vector2
 
-bit_dict = {
-  0: { 'character': ' ', 'offset': Vector2(0, 0)},
-  1: { 'character': 'o', 'offset': Vector2(4, 4)},
-  2: { 'character': 'O', 'offset': Vector2(2, 2)},
-  3: { 'character': '0', 'offset': Vector2(0, 0)},
-  4: { 'character': '@', 'offset': Vector2(0, 0)},
-  5: { 'character': '*', 'offset': Vector2(0, 0)},
-  6: { 'character': '-', 'offset': Vector2(0, 0)},
-  7: { 'character': '.', 'offset': Vector2(0, 0)}
-}
+def speed_to_char(speed_vector):
+  x,y = speed_vector.x, speed_vector.y
+  if (x > 0.5 and y > 0.5) or (x < -0.5 and y < -0.5): return 12
+  if (x < -0.5 and y > 0.5) or (x > 0.5 and y < -0.5 ): return 11
+  if abs(x) > 0.5 : return 3
+  if abs(y) > 0.5 : return 8
+  else: return 1
+
+def vector_mult(pos_a, pos_b):
+  return Vector2(pos_a.x * pos_b.x, pos_a.y * pos_b.y)
+
+def get_distance_vector(pos_a, pos_b):
+  return Vector2(pos_b.x - pos_a.x, pos_b.y - pos_a.y)
 
 def apply_border_threshold(width, height, border_width, pos):
   p = Vector2(pos.x, pos.y)
@@ -24,6 +27,18 @@ def apply_border_threshold(width, height, border_width, pos):
   if p.x <= border_width:
     p.x = border_width
   return p
+
+def is_oob(width, height, border_width, pos):
+  p = Vector2(pos.x, pos.y)
+  if p.y <= border_width:
+    return True
+  if p.y >= height-border_width:
+    return True
+  if p.x >= width-border_width:
+    return True
+  if p.x <= border_width:
+    return True
+  return False
 
 def update_bitmap(bit_width, bit_height, border_width, objs_in_scene):
   bit_array = []
@@ -53,6 +68,16 @@ def limit_vector(vec, limit):
   if v.y < -limit:
     v.y = -limit
   return v
+
+def animate_chara(width, height, pos):
+  x, y = pos[0], pos[1]
+  if x == width/2 and y == height: return 0
+  if x>width/2 and y>height - height/5: return 1
+  if x<width/2 and y>height - height/5: return 5
+  if x>width/2 and y>height/3: return 2
+  if x<width/2 and y>height/3: return 4
+  if x == width/2 and y<height/2: return 3
+  return 0
 
 def int_vector(vec):
   return Vector2(int(vec.x), int(vec.y))
@@ -94,3 +119,4 @@ def collision_to_move(cm):
     return Vector2(0, 1)
   else:
     return Vector2(0, 0)
+
