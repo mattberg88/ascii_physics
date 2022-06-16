@@ -1,9 +1,13 @@
-from utils import *
-import sys, pygame, math
 import numpy as np
+import pygame
 from pygame import Vector2
 
 pygame.init()
+# pygame.mouse.set_cursor((8,8),(0,0),(0,0,0,0,0,0,0,0),(0,0,0,0,0,0,0,0))
+
+white = 225, 225, 225
+black = 0, 0, 0
+green = 0, 255, 0
 
 clock = pygame.time.Clock()
 size = width, height = 500, 500
@@ -15,13 +19,6 @@ display_surface = pygame.display.set_mode(size)
 cell_size = 10
 max_inertia = 5
 bit_width, bit_height = int(width/cell_size), int(height/cell_size)
-bit_array = []
-for y in range(bit_height):
-  bits = []
-  for x in range(bit_width):
-    bits.append(0)
-  bit_array.append(bits)
-bitmap = np.array(bit_array)
 gravity = Vector2(0, 0.5)
 terminal_velocity = 3
 decay_rate = 0.001
@@ -30,7 +27,7 @@ font = pygame.font.SysFont('Arial', 18, bold=True)
 
 bit_dict = {
   0: { 'character': '', 'offset': Vector2(0, 0)},
-  1: { 'character': '.', 'offset': Vector2(0,0)},
+  1: { 'character': '.', 'offset': Vector2(0, 0)},
   2: { 'character': ',', 'offset': Vector2(0, 0)},
   3: { 'character': '-', 'offset': Vector2(0, 0)},
   4: { 'character': '+', 'offset': Vector2(0, 0)},
@@ -42,12 +39,6 @@ bit_dict = {
   10: { 'character': '-', 'offset': Vector2(0, 0)},
   11: { 'character': '/', 'offset': Vector2(0, 0)},
   12: { 'character': "\\", 'offset': Vector2(0, 0)},
+  13: { 'character': "ï", 'offset': Vector2(0, 0)},
 }
-char_dict = {
-  0: { 'character': "(||')", 'offset': Vector2(0, 0)},
-  1: { 'character': "( '')=", 'offset': Vector2(1,0)},
-  2: { 'character': "( '')//", 'offset': Vector2(1, 0)},
-  3: { 'character': "(` `)||", 'offset': Vector2(1, 0)},
-  4: { 'character': "\\\('' )", 'offset': Vector2(-1, 0)},
-  5: { 'character': "=('' )", 'offset': Vector2(-1, 0)}
-}
+
