@@ -1,5 +1,6 @@
 from src.constants import *
 from pygame.math import Vector2
+from pygame.mixer import Sound
 from pygame.sprite import Group, Sprite
 
 class Scene:
@@ -128,6 +129,8 @@ class Obj(Sprite):
             self.energy = 1
           else:
             if o.name == 'bullet':
+              Sound("sounds/brick.mp3").play()
+
               self.stopper = False
               self.energy = 1
       elif o in self.collided:

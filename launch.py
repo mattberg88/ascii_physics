@@ -1,7 +1,6 @@
 import sys
 import pygame
 from src import *
-
 #TODO: figure out why cant shoot straight
 #TODO: improve bounce decay
 
@@ -22,12 +21,13 @@ def read_controls(keys, mouse):
       cursor_obj.inertia = cursor_obj.inertia + Vector2(0, -3)
     cursor_obj.inertia = cursor_obj.inertia + Vector2(0, -1)
   if mouse_presses[0]:
-    if random.randint(0,1) == 0: return
+    # if random.randint(0,1) == 0: return
     bullet_pos = Vector2(int(mouse_pos[0]/cell_size), int(mouse_pos[1]/cell_size))
     bd_vector = get_distance_vector(bullet_pos, cursor_obj.real_pos+ cursor_obj.offset)
     bullet = Obj(-1, cursor_obj.real_pos + cursor_obj.offset, 5, 'bullet', scene.bitmap, True, inertia=-bd_vector, life_span=5, color=red)
     bullet.energy = 10
     scene.add_bullet(bullet)
+    # Sound("sounds/flame.mp3").play()
 
 def render(scn):
   sprites = scene.group.sprites()
