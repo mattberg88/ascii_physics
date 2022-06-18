@@ -1,28 +1,25 @@
+import random
 import numpy as np
 import pygame
+from src.colors import *
 from pygame import Vector2
 
 pygame.init()
 # pygame.mouse.set_cursor((8,8),(0,0),(0,0,0,0,0,0,0,0),(0,0,0,0,0,0,0,0))
 
-white = 225, 225, 225
-black = 0, 0, 0
-green = 0, 255, 0
-
 clock = pygame.time.Clock()
-size = width, height = 500, 500
+size = width, height = 400, 300
 screen = pygame.display.set_mode(size)
 screen_offset = Vector2(-5, -10)
 border_width = 5
-cursor_border_width = 2
 display_surface = pygame.display.set_mode(size)
 cell_size = 10
 max_inertia = 5
 bit_width, bit_height = int(width/cell_size), int(height/cell_size)
 gravity = Vector2(0, 0.5)
 terminal_velocity = 3
-decay_rate = 0.001
-frame_rate = 30
+decay_rate = 0.05
+frame_rate = 24
 font = pygame.font.SysFont('Arial', 18, bold=True)
 
 bit_dict = {
